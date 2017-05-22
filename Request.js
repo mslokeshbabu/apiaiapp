@@ -17,7 +17,7 @@ function Request (application, options) {
     self.requestSource = application.requestSource;
     var _http = application.secure ? https : http;
 
-    // var requestOptions = self._requestOptions();
+    var requestOptions = self._requestOptions();
 
     requestOptions.agent = application._agent;
 

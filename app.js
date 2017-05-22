@@ -3,9 +3,9 @@ var builder = require('botbuilder');
 var restify = require('restify'); 
 var apiairecognizer = require('api-ai-recognizer');
 
-var dbconnect = require('./database_connect');
-var ttos = require('./texttospeech');
-var ContextsRequest = require('./contexts_request');
+// var dbconnect = require('./database_connect');
+// var ttos = require('./texttospeech');
+// // var ContextsRequest = require('./contexts_request').ContextsRequest;
  
 var app = apiai("492d3d2054ef4aa48870b83d351d09c5");
 
@@ -13,204 +13,298 @@ var options = {
     sessionId: '12345'
 };
 
-// // Setup Restify Server
-// var server = restify.createServer();  
-// server.listen(process.env.port || process.env.PORT || 3978, function () {  
-//    console.log('%s listening to %s', server.name, server.url); 
-// });
+// Setup Restify Server
+var server = restify.createServer();  
+server.listen(process.env.port || process.env.PORT || 3978, function () {  
+   console.log('%s listening to %s', server.name, server.url); 
+});
 
-// // Create chat bot
-// var connector = new builder.ChatConnector({  
-//     appId: 'b5092823-73e8-4e4c-b1c5-a26e11c7aa24',
-//     appPassword: 'tkknFAtXiAHXp8JT4QdEgEK'
-// });
+// Create chat bot
+var connector = new builder.ChatConnector({  
+    appId: 'b5092823-73e8-4e4c-b1c5-a26e11c7aa24',
+    appPassword: 'tkknFAtXiAHXp8JT4QdEgEK'
+});
 
-// server.post('/api/messages', connector.listen());
+server.post('/api/messages', connector.listen());
 
-// /*var connector = new builder.ConsoleConnector().listen();*/
+/*var connector = new builder.ConsoleConnector().listen();*/
 
-// var bot = new builder.UniversalBot(connector);
+var bot = new builder.UniversalBot(connector, { persistConversationData: true });
 
-// // recognizer
-// var recognizer = new apiairecognizer('492d3d2054ef4aa48870b83d351d09c5');
+// recognizer
+var recognizer = new apiairecognizer('492d3d2054ef4aa48870b83d351d09c5');
 
-// // intents
-// var intents = new builder.IntentDialog({recognizers: [recognizer]});
+// intents
+var intents = new builder.IntentDialog({recognizers: [recognizer]});
 
-// bot.dialog('/', intents);
+bot.dialog('/', intents);
 
-// var technology = "";
-// var location = "";
-// var leadtime = "";
-// var level = "";
+// Welcome Dialog
+var MainOptions = {
+    Shop: 'search candidates',
+    Support: 'update candidate status'
+};
 
+intents.onBegin(
+    function (session, args, next) {
+            msg = new builder.Message(session)
+            .textFormat(builder.TextFormat.xml)
+            .attachments([
+                new builder.HeroCard(session)
+                    .title("Welcome to Meet Accenture Talent for Engagement (MATE)")
+                    .subtitle("I am a Smart resource management Bot")
+                    .text("The smart resource management Bot is a intelligent bot for PMs/SAs/TAs or TFS/Scheduler for resource management")
+                    .images([
+                        builder.CardImage.create(session, "https://thumbs.dreamstime.com/z/teamwork-handle-group-logo-22538327.jpg")
+                    ])
+                    .tap(builder.CardAction.openUrl(session, "https://en.wikipedia.org/wiki/Space_Needle"))
+                    .buttons([
+                        builder.CardAction.imBack(session, session.gettext(MainOptions.Shop), MainOptions.Shop),
+                        builder.CardAction.imBack(session, session.gettext(MainOptions.Support), MainOptions.Support)
+                    ])
+            ]);
+            session.send(msg);
+            
+            session.send('Hi Sam! How can I help today.. ');
+            session.send('Candidates search : eg : I am searching for candidates with Hadoop skiils:');
+       }
+);
 
-// intents.matches('searchcandidates', [
-//     function(session, args, next){
-//         session.send('Inside search candidates');
+var technology = "";
+var location = "";
+var leadtime = "";
+var level = "";
 
-//         technology = builder.EntityRecognizer.findEntity(args.entities, 'technology');
-//         location = builder.EntityRecognizer.findEntity(args.entities, 'location');
-//         leadtime = builder.EntityRecognizer.findEntity(args.entities, 'leadtime');
-//         level = builder.EntityRecognizer.findEntity(args.entities, 'level');
-        
-//         session.dialogData.candidate = {
-//             technology : technology ? technology.entity : null,
-//             location : location ? location.entity : null,
-//             leadtime : leadtime ? leadtime.entity : null,
-//             level : level ? level.entity : null,
-//         }
-//         if (!technology){
-//             builder.Prompts.text(session, 'Please specify technology');
-//         } else {
-//             if (!location) {
-//             builder.Prompts.text(session, 'Please specify location');
-//             } else {
-//                 builder.Prompts.text(session, 'Please specify the candidate Level');
-//             }
-//         } 
-//         next();
-//     }
+function executeprompt(sessiondata, options){
+
     
-// ]);
 
-// intents.matches('searchtechnology', [
-//     function(session, args, next){
-//          session.send('Inside search candidates technology');
-//          technology = builder.EntityRecognizer.findEntity(args.entities,'techology');
-//         //  location = session.dialogData.candidate.location;
+}
+
+intents.matches('searchcandidates', [
+    function(session, args ,next){
+        session.send('Inside search candidates........%s',session.message.text);
         
-//          if (!technology){
-//                builder.Prompts.text(session, 'Please specify technology');
-//          }
-//          next();
-//     },
-//     function(session, results, next){
-//         if (results.response){
-//             session.dialogData.candidate.technology = results.response;
-//         }
-//         if (!session.dialogData.candidate.location){
-//             builder.Prompts.text(session, 'Please specify Location');
-//         }
-//         next();
-//     }
-// ]);
+        var request = app.textRequest(session.message.text, options);
 
-// intents.matches('searchlocation', [
-//     function(session, args, next){
-//          session.send('Inside search candidates location');
-//         //  var technology = session.dialogData.candidate.technology;
-//          location = builder.EntityRecognizer.findEntity(args.entities, 'location');
+        request.on('response', function (response, results){
+
+             console.log('Inside apiai function with action', response.result.actionIncomplete);
+             if (response.result.actionIncomplete == true ){
+                
+                builder.Prompts.text(session, response.result.fulfillment.speech);
+
+                var request = app.textRequest(session.message.text, options);
+                request.on('response', function (response, results){
+
+                    console.log('Inside apiai function ----3');
+                 });
+
+                request.on('error', function(error) {
+                    console.log(error);
+                });
+             }
+            
+            console.log (response['result']['contexts'][0].parameters.technology);
+        });
+
+        request.on('error', function(error) {
+            console.log(error);
+        });
+        
+        request.end();
+
+        technology = builder.EntityRecognizer.findEntity(args.entities, 'technology');
+        location = builder.EntityRecognizer.findEntity(args.entities, 'location');
+        leadtime = builder.EntityRecognizer.findEntity(args.entities, 'leadtime');
+        level = builder.EntityRecognizer.findEntity(args.entities, 'level');
+
+       session.dialogData.candidate = {
+            technology : technology ? technology.entity : null,
+            location : location ? location.entity : null,
+            leadtime : leadtime ? leadtime.entity : null,
+            level : level ? level.entity : null,
+       }
+
+        if (technology){
+            builder.Prompts.text(session, 'Please specify location');
+        } else {
+            next();
+        }
+    },
+    function(session,results, next){
+        var loc = session.dialogData.candidate;
+        if (results.response){
+            loc.location = results.response;
+        }
+        if (loc.location){
+            builder.Prompts.text(session, 'Please specify level');
+        } else {
+            next();
+        }
+    },
+    function(session,results, next){
+        var lev = session.dialogData.candidate;
+        if (results.response){
+            lev.level = results.response;
+        }
+        if (lev.level){
+            builder.Prompts.text(session, 'Please specify start date');
+        } else {
+            next();
+        }
+    },
+    function(session,results){
+        var sd = session.dialogData.candidate;
+        if (results.response){
+            sd.leadtime = results.response;
+        }
+        if (sd.leadtime){
+            builder.Prompts.text(session, 'Got all ...');
+        } 
+    }
+]);
+
+intents.matches('searchtechnology', [
+    function(session, args, next){
+         session.send('Inside search candidates technology');
+         technology = builder.EntityRecognizer.findEntity(args.entities,'techology');
+        //  location = session.dialogData.candidate.location;
+        
+         if (!technology){
+               builder.Prompts.text(session, 'Please specify technology');
+         } 
+         next();
+    },
+    function(session, results, next){
+        if (results.response){
+            session.dialogData.candidate.technology = results.response;
+            console.log ('Testing ......'+ response['result']['contexts'][0].parameters.technology);
+        }
+        if (!(response['result']['contexts'][0].parameters.location)){
+            builder.Prompts.text(session, 'Please specify Location');
+        }
+    }
+]);
+
+intents.matches('searchlocation', [
+    function(session, args, next){
+         session.send('Inside search candidates location');
+        //  var technology = session.dialogData.candidate.technology;
+         location = builder.EntityRecognizer.findEntity(args.entities, 'location');
          
-//          if (!location){
-//              builder.Prompts.text(session, 'Please specify location');
-//          }
-//          next();
-//     },
-//     function(session, results, next){
-//         if (results.response){
-//             session.dialogData.candidate.location = results.response;
-//         }
-//         // if (!session.dialogData.candidate.level){
-//             builder.Prompts.text(session, 'Please specify level');
-//             next();
-//         // }
-//     }
-// ]);
+         if (!location){
+             builder.Prompts.text(session, 'Please specify location');
+         }
+         next();
+    },
+    function(session, results, next){
+        if (results.response){
+            session.dialogData.candidate.location = results.response;
+        }
+        // if (!session.dialogData.candidate.level){
+            builder.Prompts.text(session, 'Please specify level');
+            next();
+        // }
+    }
+]);
 
-// intents.matches('searchcandidatelevel', [
-//     function(session, args, next){
-//          session.send('Inside search candidate level');
-//          level = builder.EntityRecognizer.findEntity(args.entities,'level');
-//         //  var leadtime = session.dialogData.candidate.leadtime;
+intents.matches('searchcandidatelevel', [
+    function(session, args, next){
+         session.send('Inside search candidate level');
+         level = builder.EntityRecognizer.findEntity(args.entities,'level');
+        //  var leadtime = session.dialogData.candidate.leadtime;
     
-//          if (!level){
-//              builder.Prompts.text(session, 'Please specify level once again!');
-//          }
-//          next();
-//     },
-//     function(session,results, next){
-//         if (results.response){
-//             session.dialogData.candidate.level = results.response;
-//         }
-//         // if (!leadtime){
-//             builder.Prompts.text(session, 'Please specify start date');
-//             next();
-//         // }
-//     }
-// ]);
+         if (!level){
+             builder.Prompts.text(session, 'Please specify level once again!');
+         }
+         next();
+    },
+    function(session,results, next){
+        if (results.response){
+            session.dialogData.candidate.level = results.response;
+        }
+        // if (!leadtime){
+            builder.Prompts.text(session, 'Please specify start date');
+            next();
+        // }
+    }
+]);
 
-// intents.matches('searchcandidatestartdate', [
-//     function(session, args, next){
-//          session.send('Inside search candidate start date');
-//         //  var technology = session.dialogData.candidate.technology;
-//         //  var location = session.dialogData.candidate.location;
-//          leadtime = builder.EntityRecognizer.findEntity(args.entities, 'leadtime');
-//         //  var level = session.dialogData.candidate.level;
+intents.matches('searchcandidatestartdate', [
+    function(session, args, next){
+         session.send('Inside search candidate start date');
+        //  var technology = session.dialogData.candidate.technology;
+        //  var location = session.dialogData.candidate.location;
+         leadtime = builder.EntityRecognizer.findEntity(args.entities, 'leadtime');
+        //  var level = session.dialogData.candidate.level;
                   
-//          if (!leadtime){
-//              builder.Prompts.text(session, 'Please specify Leadtime once again!');
-//          }
-//          next ();
-//     },
-//     function(session, results){
-//         var lt = session.dialogData.candidate;
-//         if(results.response){
-//             lt.leadtime = results.response;
-//         }
-        
-//         // session.send('lead time is %s: ', lt.leadtime);
-//         // if (technology && location && level && leadtime){
-//             // session.send('got all information'+ session.dialogData.candidate.leadtime +'location'+ session.dialogData.candidate.location);
-//         // }
-//     }
-// ]);
+         if (!leadtime){
+             builder.Prompts.text(session, 'Please specify Leadtime once again!');
+         }
+         next ();
+    },
+    function(session, results){
+        var lt = session.dialogData.candidate;
+        if(results.response){
+            lt.leadtime = results.response;
+        }
+        console.log ('All done');
+        console.log (response['result']['contexts'][0].parameters.technology);
+        // session.send('lead time is %s: ', lt.leadtime);
+        // if (technology && location && level && leadtime){
+            // session.send('got all information'+ session.dialogData.candidate.leadtime +'location'+ session.dialogData.candidate.location);
+        // }
+    }
+]);
 
-// intents.matches('smalltalk.greetings', function(session, args){
-//     session.send('Inside small talk');
-//     var fulfillment = builder.EntityRecognizer.findEntity(args.entities, 'fulfillment');
+intents.matches('smalltalk.greetings', function(session, args){
+    session.send('Inside small talk');
+    var fulfillment = builder.EntityRecognizer.findEntity(args.entities, 'fulfillment');
 
-//     if (fulfillment){
-//         var speech = fulfillment.entity;
-//         session.send(speech);
-//     } else {
-//         session.send('sorry ... not sure how to respond');
-//     }
-// });
+    if (fulfillment){
+        var speech = fulfillment.entity;
+        session.send(speech);
+    } else {
+        session.send('sorry ... not sure how to respond');
+    }
+});
 
-// intents.onDefault(function(session){
-//     session.send('Sorry can you rephrase...');
-// });
+intents.onDefault(function(session){
+    session.send('Sorry can you rephrase...');
+});
 
 
 
-var request = app.textRequest('search for java candidates in bangalore', options);
+// var request = app.textRequest('search for java candidates in bangalore', options);
 
-console.log('The request is ');
+// console.log('The request is');
 
-request.on('response', function(response, results) {
+// request.on('response', function(response, results) {
     
-    // ttos.texttospeech('playing this in audio');
-    // console.log(results.contexts);
-    // dbconnect.databaseConnect();
-});
+//     // ttos.texttospeech('playing this in audio');
+//     // console.log(results.contexts);
+//     // dbconnect.databaseConnect();
+//     console.log (response['result']['contexts'][0].parameters.technology);
+    
+// });
 
-request.on('error', function(error) {
-    console.log(error);
-});
+// request.on('error', function(error) {
+//     console.log(error);
+// });
 
-request.end();
+// request.end();
 
-var contextrequest = ContextsRequest.ContextsRequest(app,'candidatetechloc',options);
+// var contextrequest = ContextsRequest(app, contexts, options );
 
-contextrequest.on('response', function(response) {
-        // response = [
-        // { name: "contextName" }
-        // ]
-        console.log(response);
-});
-contextrequestt.on('error', function(error) {
-        console.log(error);
-});
+// contextrequest.on('response', function(response) {
+//         // response = [
+//         // { name: "contextName" }
+//         // ]
+//         console.log(response);
+// });
+// contextrequestt.on('error', function(error) {
+//         console.log(error);
+// });
 
-contextrequest.end();
+// contextrequest.end();
